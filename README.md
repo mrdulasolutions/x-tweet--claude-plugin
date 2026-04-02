@@ -293,20 +293,167 @@ Key things that burn your POST quota fast: polls, quote tweets, replies. Communi
 
 ## Troubleshooting
 
+This section is built from real setup failures. Work through them in order — most issues are Developer Portal configuration, not code.
+
+---
+
+### Auth errors during setup
+
+---
+
+**`client-not-enrolled` or all v2 endpoints fail immediately**
+
+Your app exists but isn't inside a Project. X requires all apps to be attached to a Developer Project to access v2 endpoints.
+
+Fix:
+1. Go to [developer.x.com](https://developer.x.com) → left sidebar → **Projects & Apps**
+2. Click **+ Create Project**
+3. Name it anything, pick a use case
+4. When asked to add an app, select your existing app
+5. Save — then re-run `xurl whoami`
+
+This is the most common first-time blocker. The error message does not mention Projects at all, which makes it hard to diagnose.
+
+---
+
+**`OAuth2 authentication failed: Auth Error: UsernameNotFound`**
+
+The browser says "Authentication successful! You can close this window." but the terminal prints this error.
+
+Cause: the OAuth2 token was issued but lacks the `users.read` scope, so xurl can't fetch your username after login.
+
+Fix — in the Developer Portal under your app → **User authentication settings → Edit**:
+
+1. Set **App permissions** to **Read and Write** (not just Read)
+2. Under **OAuth 2.0 scopes**, enable all of:
+   - `tweet.read`
+   - `tweet.write`
+   - `users.read`
+   - `offline.access`
+3. Save, then re-run `xurl auth oauth2`
+
+After changing scopes you must re-authenticate — existing tokens won't pick up the new scopes.
+
+---
+
+**`Something went wrong — You weren't able to give access to the App`**
+
+Browser error during the OAuth2 login flow. Cause: the redirect URI in your Developer Portal doesn't match what xurl expects.
+
+Fix — in Developer Portal → your app → **User authentication settings → Edit**:
+
+1. Set **Type of App** to **Web App** (not Native App)
+2. Under **Callback URI / Redirect URL**, add exactly:
+   ```
+   http://localhost:8080/callback
+   ```
+3. Set **Website URL** to anything (e.g. `https://yoursite.com`)
+4. Save, then re-run `xurl auth oauth2`
+
+The redirect URI must match character-for-character including the trailing path. `http://localhost:8080` alone (without `/callback`) will not work.
+
+---
+
+**`xurl auth oauth2` opens nothing / hangs**
+
+xurl starts a local server on port 8080 to receive the OAuth callback. If the browser doesn't open automatically, copy the URL it prints and open it manually. If port 8080 is in use, stop whatever is running on it (`lsof -i :8080`).
+
+---
+
+**OAuth1 and bearer are set but commands still fail**
+
+Check which app is currently the default:
+
+```bash
+xurl auth status
+```
+
+If your app shows credentials but isn't marked as default, set it:
+
+```bash
+xurl auth default "Your App Name"
+```
+
+Then re-test with `xurl whoami`.
+
+---
+
+**`xurl oauth1` or `xurl oauth2` returns `{} Error: request failed`**
+
+These are not valid commands. The auth subcommands live under `xurl auth`:
+
+```bash
+xurl auth oauth2        # run the OAuth2 login flow
+xurl auth oauth1 ...    # configure OAuth1 credentials
+xurl auth status        # check what's stored
+```
+
+Running `xurl oauth1` or `xurl oauth2` at the top level is a common typo — xurl parses it as a URL and fails.
+
+---
+
+### Runtime errors
+
+---
+
 **`command not found: xurl`**
-The MCP server defaults to `/opt/homebrew/bin/xurl`. Set `XURL_PATH` in `.mcp.json` to your actual path (`which xurl`).
+
+The MCP server defaults to `/opt/homebrew/bin/xurl`. If you installed xurl elsewhere, find the actual path:
+
+```bash
+which xurl
+```
+
+Then update `.mcp.json`:
+
+```json
+"XURL_PATH": "/your/actual/path/to/xurl"
+```
+
+---
 
 **`401 Unauthorized`**
-Run `xurl auth status` to check your token. Re-run `xurl auth login` if it's expired.
 
-**`403 Forbidden` on replies/quotes**
-Expected on free tier due to X's anti-automation rules. Community posts (`x_community_post`) are not affected.
+Token is missing or expired. Check status and re-authenticate:
+
+```bash
+xurl auth status
+xurl auth oauth2
+```
+
+---
+
+**`403 Forbidden` on replies or quote tweets**
+
+Expected behavior on free and basic tiers. X's anti-bot enforcement ("Operation Kill the Bots", Feb 2026) blocks programmatic replies and cold quote tweets. Community posts (`x_community_post`) and direct timeline posts (`x_post`) are not affected.
+
+---
 
 **`429 Too Many Requests`**
-You've hit your rate limit. Check X developer dashboard for your usage. Wait 15 minutes for GET limits; 24 hours for POST limits.
 
-**Trends return empty or 401**
-Trends use the v1.1 API and require OAuth 1.0a credentials. See setup step 5.
+You've hit your rate limit. GET limits reset every 15 minutes. POST limits (tweets) reset every 24 hours. Check your current usage in the X Developer Dashboard.
+
+---
+
+**Trends return empty or `401`**
+
+`x_trends` and `x_trend_locations` use the v1.1 API which requires OAuth 1.0a — not OAuth 2.0. Run:
+
+```bash
+xurl auth oauth1 \
+  --consumer-key YOUR_API_KEY \
+  --consumer-secret YOUR_API_SECRET \
+  --access-token YOUR_ACCESS_TOKEN \
+  --access-token-secret YOUR_TOKEN_SECRET
+```
+
+You can find all four values in Developer Portal → your app → **Keys and Tokens**.
+
+---
+
+**DM tools return `403` or `not authorized`**
+
+Direct Message access requires your app to have DM permissions explicitly enabled. In Developer Portal → your app → **User authentication settings**, set **App permissions** to **Read, Write, and Direct Messages**. You must re-authenticate after changing permissions.
 
 ---
 
