@@ -10,12 +10,37 @@
  */
 
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 
-const XURL_BIN = process.env.XURL_PATH || "/opt/homebrew/bin/xurl";
+/** Resolve xurl binary — try env var, then common install paths. */
+function resolveXurl() {
+  const candidates = [
+    process.env.XURL_PATH,
+    "/opt/homebrew/bin/xurl",                         // macOS Homebrew (Apple Silicon)
+    "/usr/local/bin/xurl",                            // macOS Homebrew (Intel) / Linux
+  ];
+
+  // Also check npm global prefix (Cowork sandbox installs here)
+  try {
+    const npmPrefix = execFileSync("npm", ["config", "get", "prefix"], {
+      encoding: "utf-8",
+      timeout: 5000,
+    }).trim();
+    if (npmPrefix) candidates.push(`${npmPrefix}/bin/xurl`);
+  } catch { /* ignore */ }
+
+  for (const p of candidates) {
+    if (p && existsSync(p)) return p;
+  }
+  // Last resort — hope it's on PATH
+  return process.env.XURL_PATH || "xurl";
+}
+
+const XURL_BIN = resolveXurl();
 const COMMUNITY_ID = process.env.X_COMMUNITY_ID || "";
 const DEFAULT_TIMEOUT = 30_000;
 

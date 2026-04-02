@@ -458,18 +458,43 @@ Running `xurl oauth1` directly causes xurl to interpret it as a URL — it fails
 
 ---
 
-**`command not found: xurl`**
+**`spawnSync /opt/homebrew/bin/xurl ENOENT` — every tool call fails**
 
-Find the actual path and update `.mcp.json`:
+The server can't find the xurl binary. This happens in sandboxed environments (Docker, CI, cloud IDEs, Cowork) where `/opt/homebrew/bin/xurl` doesn't exist.
 
-```bash
-which xurl
-# e.g. /usr/local/bin/xurl
-```
+The server resolves xurl at startup in this order:
+1. `XURL_PATH` env var (if set)
+2. `/opt/homebrew/bin/xurl` (macOS Apple Silicon / Homebrew)
+3. `/usr/local/bin/xurl` (macOS Intel / Linux Homebrew)
+4. `$(npm config get prefix)/bin/xurl` (npm global install)
+5. Bare `xurl` on PATH (last resort)
+
+If none of those exist, set `XURL_PATH` explicitly in your MCP config:
 
 ```json
-"XURL_PATH": "/usr/local/bin/xurl"
+"env": {
+  "XURL_PATH": "/your/path/to/xurl"
+}
 ```
+
+Find it with `which xurl`.
+
+In sandboxes where xurl isn't pre-installed, install it via npm and set `HOME` so xurl can find its credential file:
+
+```bash
+npm config set prefix ~/.npm-global
+npm install -g @xdevplatform/xurl
+```
+
+Then set in your MCP config env:
+```json
+"XURL_PATH": "/root/.npm-global/bin/xurl",
+"HOME": "/your/home/dir"
+```
+
+**`command not found: xurl`**
+
+Same root cause as above — xurl isn't on the path the MCP server searches. Use `which xurl` to find it and set `XURL_PATH`.
 
 ---
 
