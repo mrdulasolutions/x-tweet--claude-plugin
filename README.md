@@ -305,11 +305,18 @@ This section is built from real setup failures. Work through them in order — m
 
 Your app exists but isn't inside a Project. X requires all apps to be attached to a Developer Project to access v2 endpoints.
 
-Fix:
+**Option A — Create a Project and attach your app:**
 1. Go to [developer.x.com](https://developer.x.com) → left sidebar → **Projects & Apps**
 2. Click **+ Create Project**
 3. Name it anything, pick a use case
 4. When asked to add an app, select your existing app
+5. Save — then re-run `xurl whoami`
+
+**Option B — Load a package directly from your app page (faster):**
+1. Go to your app in the Developer Portal
+2. Click **Manage Apps**
+3. Click **Load Package**
+4. Select **Paid** and **Development**
 5. Save — then re-run `xurl whoami`
 
 This is the most common first-time blocker. The error message does not mention Projects at all, which makes it hard to diagnose.
