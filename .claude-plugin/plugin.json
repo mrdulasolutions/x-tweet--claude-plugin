@@ -1,0 +1,9 @@
+{
+  "name": "x-twitter",
+  "version": "0.1.0",
+  "description": "Post to your X/Twitter community and manage your account from Cowork, powered by xurl (the official X CLI).",
+  "author": {
+    "name": "M.R. Dula"
+  },
+  "keywords": ["twitter", "x", "social-media", "community", "xurl"]
+}

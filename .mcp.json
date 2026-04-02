@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "x-twitter": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/servers/x-mcp-server.mjs"],
+      "env": {
+        "XURL_PATH": "/opt/homebrew/bin/xurl",
+        "X_COMMUNITY_ID": "2039109548405907598"
+      }
+    }
+  }
+}
